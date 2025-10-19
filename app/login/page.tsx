@@ -29,11 +29,14 @@ export default function LoginPage() {
   const [showResetPassword, setShowResetPassword] = useState(false)
 
   const handleLogin = () => {
-    const opt = {
-        method: "GET",
-    }
     fetch(`/api/users?email=${loginForm.email}&password=${loginForm.password}`)
     .then(r => r.json())
+        .then(r => {
+            const user = r.user
+            setUser(user)
+            window.location.href = "http://localhost:3000"
+        })
+    .catch(e => console.log(e))
   }
 
   const handleSignup = () => {

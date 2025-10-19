@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Calendar, MapPin, DollarSign } from "lucide-react"
+import {useEffect, useState} from "react"
+import {Button} from "@/components/ui/button"
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
+import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
+import {Calendar, ChevronLeft, ChevronRight, DollarSign, MapPin} from "lucide-react"
 import {useLogin} from "@/contexts/login-context"
+import {Event} from "@/utils/interface"
 
 const MONTHS = [
   "Janeiro",
@@ -40,14 +41,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   Outro: "bg-gray-500",
 }
 
-interface Event {
-  id: string
-  date: string
-  name: string
-  type: string
-  location?: string
-  cost: number
-}
+
 
 export default function CalendarPage() {
   const today = new Date()
@@ -68,6 +62,7 @@ export default function CalendarPage() {
     fetch(`/api/events?user=${user}`)
       .then(r => r.json())
       .then(r => setEvents(r))
+      .catch(e => console.log(e))
   },[])
 
   const year = currentDate.getFullYear()
@@ -129,16 +124,21 @@ export default function CalendarPage() {
 
     const opt = {
       method:"POST",
-      body:{newEvent}
-
+        headers: {
+          "Content-Type": "application/json",
+        },
+      body:JSON.stringify({data: newEvent})
     }
 
-    fetch("/api/events")
+    fetch("/api/events",opt)
+        .then(r => r.json())
+        .catch(e => console.log(e))
   }
 
   const getDayEvents = (day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-    return events.filter((event) => event.date === dateStr)
+
+      return events.filter((event) => event.date === dateStr)
   }
 
   const getCurrentMonthTotal = () => {
@@ -154,8 +154,7 @@ export default function CalendarPage() {
       const eventDate = new Date(event.date)
       return eventDate.getMonth() === month && eventDate.getFullYear() === year
     })
-    const uniqueTypes = [...new Set(currentMonthEvents.map((event) => event.type))]
-    return uniqueTypes
+      return [...new Set(currentMonthEvents.map((event) => event.type))]
   }
 
   // Gerar os dias do calendário
