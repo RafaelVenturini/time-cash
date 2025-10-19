@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { useSearchParams } from "next/navigation";
 import { RowDataPacket } from "mysql2";
 import db from "@/database/db"
 
 export async function GET(req:NextRequest) {
-    const searchParams = useSearchParams()
+    const searchParams = req.nextUrl.searchParams
     const email = searchParams.get('email')
     const password = searchParams.get('password')
 

@@ -106,19 +106,34 @@ export default function CalendarPage() {
   const handleSaveEvent = () => {
     if (!eventForm.name || !eventForm.type || !selectedDay) return
 
+    const id = Date.now().toString()
+    const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`
+    const name = eventForm.name
+    const type = eventForm.type
+    const location = eventForm.location
+    const cost = Number.parseFloat(eventForm.cost) || 0
+
     const newEvent: Event = {
-      id: Date.now().toString(),
-      date: `${year}-${String(month + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`,
-      name: eventForm.name,
-      type: eventForm.type,
-      location: eventForm.location,
-      cost: Number.parseFloat(eventForm.cost) || 0,
+      id,
+      date,
+      name,
+      type,
+      location,
+      cost 
     }
 
     setEvents([...events, newEvent])
     setEventForm({ name: "", type: "", location: "", cost: "" })
     setIsModalOpen(false)
     setSelectedDay(null)
+
+    const opt = {
+      method:"POST",
+      body:{newEvent}
+
+    }
+
+    fetch("/api/events")
   }
 
   const getDayEvents = (day: number) => {
