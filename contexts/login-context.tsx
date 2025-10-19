@@ -1,16 +1,16 @@
 "use client"
-import { useRouter, usePathname } from "next/navigation"
-import { createContext, useState, ReactNode, useEffect, useContext } from "react"
+import {usePathname, useRouter} from "next/navigation"
+import {createContext, ReactNode, useContext, useEffect, useState} from "react"
 
 type LoginContextType = {
     logout: () => void
-    setUser: (v:number) => void
+    HandleChangeUser: (v: number) => void
     user: () => void
 }
 
 const LoginContext = createContext<LoginContextType | undefined>(undefined)
 
-export function LoginProvider({ children }: { children: ReactNode }) {
+export function LoginProvider({children}: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState<boolean>(true)
     const [user, setUser] = useState<number | undefined>(undefined)
     const router = useRouter()
@@ -26,20 +26,19 @@ export function LoginProvider({ children }: { children: ReactNode }) {
     // Redirecionar se não estiver logado
     useEffect(() => {
         if (isLoading) return // Espera carregar do localStorage
-        
+
         const isLoginPage = pathname === "/login"
-        
+
         if (!user && !isLoginPage) {
             router.push("/login")
         }
     }, [user, pathname, router, isLoading])
 
-    // Sincronizar com localStorage
-    useEffect(() => {
-        if (!isLoading) {
-            if(user)localStorage.setItem("user", user.toString())
-        }
-    }, [isLoading])
+    function HandleChangeUser(v: number) {
+        setUser(v)
+        localStorage.setItem("user", v.toString())
+        window.location.href = "http://localhost:3000"
+    }
 
     const logout = () => {
         setUser(undefined)
@@ -49,7 +48,7 @@ export function LoginProvider({ children }: { children: ReactNode }) {
 
     const value: LoginContextType = {
         logout,
-        setUser,
+        HandleChangeUser,
         //@ts-expect-error user exists?
         user
     }

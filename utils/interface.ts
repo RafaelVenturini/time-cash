@@ -6,3 +6,12 @@ export interface Event {
     location?: string
     cost: number
 }
+
+export interface DbEvent {
+    event_id: string
+    date: string
+    type: string
+    place: string
+    money: string
+    name: string
+}
