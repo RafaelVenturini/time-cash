@@ -1,16 +1,19 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { use, useEffect, useState } from "react"
+import { redirect, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Lock, Mail, User } from "lucide-react"
+import { useLogin } from "@/contexts/login-context"
 import { sign } from "node:crypto"
+import { headers } from "next/headers"
 
 export default function LoginPage() {
+  const {setUser} = useLogin()
   const router = useRouter()
   const [loginForm, setLoginForm] = useState({
     email: "",
@@ -34,14 +37,23 @@ export default function LoginPage() {
   }
 
   const handleSignup = () => {
-    fetch(`/api/users?email=${signupForm.email}&password=${signupForm.password}`)
-    .then(r => r.json())
-    .then(r => {
-      console.log("data: ",r)
-      if(r.status == 200){
-        console.log("user_id: ", r.user)
-      }
-    })
+    const opt ={
+      method: "POST",
+      headers:{'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        email: signupForm.email,
+        password: signupForm.password
+      })
+    }
+    fetch(`/api/users`, opt)
+      .then(r => r.json())
+      .then(r => {
+        console.log("data: ",r)
+        if(r.status == 200){
+          setUser(r.user)
+          window.location.href = "http://localhost:3000"
+        }
+      })
   }
 
   const handleResetPassword = () => {

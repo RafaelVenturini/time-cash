@@ -2,7 +2,7 @@ CREATE DATABASE time_cash;
 USE time_cash;
 
 CREATE TABLE users(
-    user_id INT PRIMARY KEY,
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(225),
     password varchar(20)
 )

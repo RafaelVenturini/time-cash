@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { useSearchParams } from "next/navigation";
 import { RowDataPacket } from "mysql2";
 import db from "@/database/db"
 
 export async function GET(req:NextRequest) {
-    const { searchParams } = new URL(req.url)
+    const searchParams = useSearchParams()
     const email = searchParams.get('email')
     const password = searchParams.get('password')
 
@@ -26,16 +27,20 @@ export async function GET(req:NextRequest) {
 }
 
 export async function POST(req: NextRequest){
+    try{
     const body = await req.json()
     const {email,password} = body
+    console.log(email,password)
+    if(!email || !password) return NextResponse.json({msg:"email e senha sao obrigatórios"},{status:500})
 
-    try{
         const user_id = await db.execute(`
             INSERT INTO users(email, password) VALUES (?,?)    
         `,[email, password])
-        return NextResponse.json({status:200, user_id: user_id})
+        //@ts-expect-error insertId exists
+        return NextResponse.json({status:200, user_id: user_id[0].insertId})
     }
     catch(e){
+        console.log("Error: ",e)
         return NextResponse.json({status:500, msg:"erro ao cadastrar."})
     }
 }

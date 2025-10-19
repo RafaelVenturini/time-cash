@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, Calendar, MapPin, DollarSign } from "lucide-react"
+import {useLogin} from "@/contexts/login-context"
 
 const MONTHS = [
   "Janeiro",
@@ -50,6 +51,7 @@ interface Event {
 
 export default function CalendarPage() {
   const today = new Date()
+  const {user} = useLogin()
   const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
   const [events, setEvents] = useState<Event[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -61,6 +63,12 @@ export default function CalendarPage() {
     cost: "",
   })
   const [hoveredDay, setHoveredDay] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/events?user=${user}`)
+      .then(r => r.json())
+      .then(r => setEvents(r))
+  },[])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -171,7 +179,7 @@ export default function CalendarPage() {
           )}
 
           {hoveredDay === day && hasEvents && (
-            <div className="absolute top-14 left-1/2 transform -translate-x-1/2 bg-popover border border-border rounded-lg p-3 shadow-lg z-10 min-w-48">
+            <div className="bg-fff absolute top-14 left-1/2 transform -translate-x-1/2 bg-popover border border-border rounded-lg p-3 shadow-lg z-10 min-w-48">
               <div className="text-sm font-semibold mb-2">
                 {day}/{month + 1}/{year}
               </div>
@@ -274,7 +282,7 @@ export default function CalendarPage() {
         </Card>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md bg-fff">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
@@ -298,7 +306,7 @@ export default function CalendarPage() {
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-fff">
                     {EVENT_TYPES.map((type) => (
                       <SelectItem key={type} value={type}>
                         {type}

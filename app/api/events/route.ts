@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import db from "@/database/db"
+import { useSearchParams } from "next/navigation"
 
-export async function GET(req:NextRequest){
+export async function GET(){
     try{
-        const body = await req.json()
-        const {user_id} = body
+        const params = useSearchParams()
+        const user_id = params.get('user')
         if(!user_id) return NextResponse.json({status:500, error: "O ID de usuário nao foi enviado!"})
 
         const [data] = await db.execute(`
