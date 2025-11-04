@@ -5,22 +5,28 @@ export async function GET(req: NextRequest) {
     try {
         const params = req.nextUrl.searchParams
         const user_id = params.get('user')
-        if (!user_id) return NextResponse.json({status: 500, error: "O ID de usuário nao foi enviado!"})
+        if (!user_id) {
+            console.log("Não tem id de user")
+            return NextResponse.json({error: "O ID de usuário nao foi enviado!"}, {status: 500})
+        }
 
         const [data] = await db.execute(`
             SELECT event_id, date, type, place, money, name
             FROM events
             WHERE user_id = ?;
         `, [user_id])
-        return NextResponse.json({status: 200, data: data})
+        return NextResponse.json({data: data}, {status: 200,})
     } catch (e) {
         console.log(e)
-        return NextResponse.json({status: 500})
+        return NextResponse.json({error: e}, {status: 500})
     }
 }
 
 export async function POST(req: NextRequest) {
-    if (req.body === null) return NextResponse.json({status: 500, msg: "O Body é necessário"})
+    if (req.body === null) {
+        console.log("Não tem body")
+        return NextResponse.json({msg: "O Body é necessário"}, {status: 500})
+    }
     const body = await req.json()
     const {date, name, type, location, cost, id, user} = body
 
@@ -47,15 +53,15 @@ export async function POST(req: NextRequest) {
             VALUES (place), money =
             VALUES (money);
         `, values)
-        return NextResponse.json({status: 200, data: values})
+        return NextResponse.json({data: values, status: 200})
     } catch (e) {
         console.log(e)
-        return NextResponse.json({status: 500, msg: "Erro"})
+        return NextResponse.json({msg: "Erro"}, {status: 500})
     }
 }
 
 export async function DELETE(req: NextRequest) {
-    if (req.body === null) return NextResponse.json({status: 500, msg: "O Body é necessário"})
+    if (req.body === null) return NextResponse.json({msg: "O Body é necessário"}, {status: 500})
     const body = await req.json()
     const {id} = body
 
@@ -65,9 +71,9 @@ export async function DELETE(req: NextRequest) {
             FROM event
             WHERE id = ?
         `, id)
-        return NextResponse.json({status: 200})
+        return NextResponse.json({ok: true}, {status: 200})
     } catch (e) {
         console.log(e)
-        return NextResponse.json({status: 500, msg: "Erro"})
+        return NextResponse.json({msg: e}, {status: 500})
     }
 }

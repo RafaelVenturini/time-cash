@@ -10,6 +10,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Calendar, ChevronLeft, ChevronRight, DollarSign, MapPin} from "lucide-react"
 import {useLogin} from "@/contexts/login-context"
 import {DbEvent, Event} from "@/utils/interface"
+import {SideNav} from "@/components/side-nav";
 
 const MONTHS = [
     "Janeiro",
@@ -237,8 +238,10 @@ export default function CalendarPage() {
     }
 
     return (
+
         <div className="min-h-screen bg-background p-4">
             <div className="max-w-md mx-auto space-y-4">
+                <SideNav/>
                 <Card>
                     <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
@@ -289,7 +292,8 @@ export default function CalendarPage() {
                                         <div className="grid grid-cols-2 gap-2">
                                             {getCurrentMonthEventTypes().map((type) => (
                                                 <div key={type} className="flex items-center gap-2 text-xs">
-                                                    <div className={`h-3 w-3 rounded ${EVENT_TYPE_COLORS[type]}`}></div>
+                                                    <div
+                                                        className={`h-3 w-3 rounded ${EVENT_TYPE_COLORS[type]}`}></div>
                                                     <span>{type}</span>
                                                 </div>
                                             ))}
@@ -301,6 +305,7 @@ export default function CalendarPage() {
                     </CardContent>
                 </Card>
 
+
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -309,7 +314,8 @@ export default function CalendarPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-600">R$ {getCurrentMonthTotal().toFixed(2)}</div>
+                        <div
+                            className="text-2xl font-bold text-green-600">R$ {getCurrentMonthTotal().toFixed(2)}</div>
                         <p className="text-sm text-muted-foreground">Total movimentado em {MONTHS[month]}</p>
                     </CardContent>
                 </Card>
@@ -392,6 +398,7 @@ export default function CalendarPage() {
                         </div>
                     </DialogContent>
                 </Dialog>
+
             </div>
         </div>
     )

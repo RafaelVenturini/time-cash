@@ -1,3 +1,4 @@
+DROP SCHEMA IF EXISTS time_cash;
 CREATE DATABASE time_cash;
 USE time_cash;
 
@@ -19,3 +20,4 @@ CREATE TABLE events
     name     VARCHAR(225),
     FOREIGN KEY (user_id) REFERENCES users (user_id)
 );
+
