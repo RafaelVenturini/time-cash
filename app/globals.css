@@ -65,6 +65,7 @@
 
 :root {
     --side-nav-w: 200px;
+    --hover-color: #a5a5a5;
 }
 
 .bg-fff {
@@ -100,6 +101,7 @@ main {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    padding: 1rem;
     width: 60%;
 }
 
@@ -111,8 +113,51 @@ main {
     align-items: center;
 }
 
-.table {
+table {
     width: 100%;
     border-collapse: collapse;
+    padding: 20px;
+
+    thead {
+        background-color: #000;
+        color: #fff;
+
+        th {
+            width: 20%;
+        }
+    }
+
+    tbody tr:hover {
+        background-color: var(--hover-color);
+    }
+}
+
+tr {
+    border: 1px solid #000;
+    padding: 10px;
+
+    td {
+        padding: 10px;
+    }
+}
+
+.header-list {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     margin: 20px;
+    width: 50%;
+
+    .active {
+        color: limegreen;
+    }
+
+    .disable {
+        color: indianred;
+    }
+}
+
+.calendar-day-cell:hover {
+    background-color: var(--hover-color);
 }

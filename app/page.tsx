@@ -193,7 +193,7 @@ export default function CalendarPage() {
                     onClick={() => handleDayClick(day)}
                     onMouseEnter={() => setHoveredDay(day)}
                     onMouseLeave={() => setHoveredDay(null)}
-                    className={`h-12 w-12 flex items-center justify-center rounded-lg text-sm font-medium cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground relative ${
+                    className={`calendar-day-cell h-12 w-12 flex items-center justify-center rounded-lg text-sm font-medium cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground relative ${
                         isToday(day) ? "bg-primary text-primary-foreground font-bold" : "text-foreground"
                     }`}
                 >

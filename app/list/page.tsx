@@ -6,6 +6,7 @@ import {useLogin} from "@/contexts/login-context";
 import {DbEvent} from "@/utils/interface";
 import {toBLR} from "@/utils/string-manipulation/convert-money";
 import {normalDate} from "@/utils/string-manipulation/normal date";
+import {DollarSign} from "lucide-react";
 
 export default function ListPage() {
     const thead = [
@@ -18,23 +19,61 @@ export default function ListPage() {
     const ctx = useLogin()
     const user = ctx.user
     const [events, setEvents] = useState<DbEvent[] | null>(null)
+    const [showEvents, setShowEvents] = useState<DbEvent[] | null>(null)
+    const [sort, setSort] = useState<number>(0)
+    const [money, setMoney] = useState<number>(0)
 
-    function sortDate(v){
-        if(events){
-            switch (v){
-                case 0:
-                    return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            }   case 1:
-                    return events.sort()
+    useEffect(() => {
+        if (money === 3) setMoney(0)
+
+        switch (money) {
+            case 0:
+                setSort(1)
+                break;
+            case 1:
+                setShowEvents(events?.filter(e => Number(e.money) > 0) || null)
+                break;
+            case 2:
+                setShowEvents(events?.filter(e => e.money == null) || null)
+                break;
+
+            default:
+                setShowEvents(events)
+                break;
         }
-    }
+    }, [money]);
+
+    useEffect(() => {
+        let sorted = null
+        if (showEvents) {
+            switch (sort) {
+                case 0:
+                    sorted = showEvents.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 1:
+                    sorted = showEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                    break;
+                case 2:
+                    sorted = showEvents.sort((a, b) => a.place.localeCompare(b.place));
+                    break;
+                case 3:
+                    sorted = showEvents.sort((a, b) => Number(a.money) - Number(b.money));
+                    break;
+                case 4:
+                    sorted = showEvents.sort((a, b) => a.type.localeCompare(b.type));
+                    break;
+            }
+        }
+        setShowEvents(sorted)
+    }, [sort]);
 
     useEffect(() => {
         fetch(`/api/events?user=${user}`)
             .then(r => r.json())
             .then(r => r.data as DbEvent[])
             .then(r => {
-                setEvents(r.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()))
+                setEvents(r)
+                setShowEvents(r.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()))
                 console.log(r)
             })
     }, []);
@@ -66,16 +105,34 @@ export default function ListPage() {
         <div>
             <SideNav/>
             <main className="main-content">
-                <h1>Listagem de eventos</h1>
+                <div className="header-list">
+                    <div></div>
+                    <h1>Listagem de eventos</h1>
+                    <button
+                        className={`btn-money ${money === 1 ? "active" : money === 2 ? "disable" : ""}`}
+                        onClick={() => setMoney(money + 1)}
+                    >
+                        <DollarSign/>
+                    </button>
+                </div>
                 <Card className="card-list w-full">
                     <table className="table-auto w-full">
                         <thead>
                         <tr>
-                            {thead.map(x => <th key={x.label}>{x.label}</th>)}
+                            {
+                                thead.map((x, i) => (
+                                    <th
+                                        key={x.label}
+                                        onClick={() => setSort(i)}
+                                    >
+                                        {x.label}
+                                    </th>
+                                ))
+                            }
                         </tr>
                         </thead>
                         <tbody>
-                        {events.map(x => (
+                        {showEvents?.map(x => (
                             <tr>
                                 <td>{x.name}</td>
                                 <td>{normalDate(x.date)}</td>
