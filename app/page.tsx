@@ -2,7 +2,6 @@
 
 import {useEffect, useState} from "react"
 import {Button} from "@/components/ui/button"
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog"
 import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
@@ -11,6 +10,7 @@ import {Calendar, ChevronLeft, ChevronRight, DollarSign, MapPin} from "lucide-re
 import {useLogin} from "@/contexts/login-context"
 import {DbEvent, Event} from "@/utils/interface"
 import {SideNav} from "@/components/side-nav";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 
 const MONTHS = [
     "Janeiro",
@@ -239,9 +239,10 @@ export default function CalendarPage() {
 
     return (
 
-        <div className="min-h-screen bg-background p-4">
-            <div className="max-w-md mx-auto space-y-4">
+        <div className="min-h-screen bg-background p-4 main-content-wrapper">
+            <div className="mx-auto space-y-4 main-page-wrapper">
                 <SideNav/>
+
                 <Card>
                     <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
@@ -249,7 +250,6 @@ export default function CalendarPage() {
                                     className="h-8 w-8 bg-transparent">
                                 <ChevronLeft className="h-4 w-4"/>
                             </Button>
-
                             <CardTitle className="text-xl font-semibold">
                                 {MONTHS[month]} {year}
                             </CardTitle>
@@ -304,7 +304,6 @@ export default function CalendarPage() {
                         </div>
                     </CardContent>
                 </Card>
-
 
                 <Card>
                     <CardHeader className="pb-2">

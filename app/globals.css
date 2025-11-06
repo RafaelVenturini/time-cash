@@ -161,3 +161,17 @@ tr {
 .calendar-day-cell:hover {
     background-color: var(--hover-color);
 }
+
+.main-page-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.main-content-wrapper {
+    margin-left: var(--side-nav-w);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}

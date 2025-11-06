@@ -37,7 +37,7 @@ export function LoginProvider({children}: { children: ReactNode }) {
     function HandleChangeUser(v: number) {
         setUser(v)
         localStorage.setItem("user", JSON.stringify(v))
-        window.location.href = "http://localhost:3000"
+        window.location.href = "/"
     }
 
     const logout = () => {
