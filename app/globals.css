@@ -168,10 +168,46 @@ tr {
     gap: 2rem;
 }
 
+.divider {
+    width: 100%;
+    height: 1px;
+    background-color: #000;
+    margin: 1rem 0;
+}
+
 .main-content-wrapper {
     margin-left: var(--side-nav-w);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+}
+
+.bank-count-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.bank-card {
+    height: 100%;
+}
+
+.bank-count {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    h3 {
+        font-size: 1.5rem;
+    }
+}
+
+.gains {
+    background-color: limegreen;
+}
+
+.loses {
+    background-color: indianred;
 }

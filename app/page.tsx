@@ -6,11 +6,12 @@ import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/
 import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
-import {Calendar, ChevronLeft, ChevronRight, DollarSign, MapPin} from "lucide-react"
+import {Calendar, ChevronLeft, ChevronRight, DollarSign, MapPin, X} from "lucide-react"
 import {useLogin} from "@/contexts/login-context"
 import {DbEvent, Event} from "@/utils/interface"
 import {SideNav} from "@/components/side-nav";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Divider} from "@/components/divider";
 
 const MONTHS = [
     "Janeiro",
@@ -29,7 +30,7 @@ const MONTHS = [
 
 const DAYS_OF_WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
-const EVENT_TYPES = ["Trabalho", "Pessoal", "Reunião", "Aniversário", "Compromisso médico", "Viagem", "Lazer", "Outro"]
+const EVENT_TYPES = ["Trabalho", "Pessoal", "Reunião", "Aniversário", "Compromisso médico", "Viagem", "Lazer", "Assinatura", "Parcelamento", "Outro"]
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
     Trabalho: "bg-blue-500",
@@ -40,6 +41,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
     Viagem: "bg-orange-500",
     Lazer: "bg-yellow-500",
     Outro: "bg-gray-500",
+    Parcelamento: "bg-red-500",
+    Assinatura: "bg-red-500",
 }
 
 
@@ -55,7 +58,9 @@ export default function CalendarPage() {
         type: "",
         location: "",
         cost: "",
+        times: 1
     })
+
     const [hoveredDay, setHoveredDay] = useState<number | null>(null)
 
     useEffect(() => {
@@ -73,6 +78,7 @@ export default function CalendarPage() {
                 })
 
                 console.log("Eventos: ", fixedEvents)
+                // @ts-ignore
                 setEvents(fixedEvents)
             })
             .catch(e => console.log(e))
@@ -132,7 +138,7 @@ export default function CalendarPage() {
         }
 
         setEvents([...events, newEvent])
-        setEventForm({name: "", type: "", location: "", cost: ""})
+        setEventForm({name: "", type: "", location: "", cost: "", times: 1})
         setIsModalOpen(false)
         setSelectedDay(null)
         console.log("new event: ", newEvent)
@@ -312,10 +318,26 @@ export default function CalendarPage() {
                             Resumo do Mês
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className={"bank-card"}>
                         <div
                             className="text-2xl font-bold text-green-600">R$ {getCurrentMonthTotal().toFixed(2)}</div>
-                        <p className="text-sm text-muted-foreground">Total movimentado em {MONTHS[month]}</p>
+                        <p className="text-sm text-muted-foreground">Total restante em {MONTHS[month]}</p>
+                        <Divider/>
+                        <div className="bank-count-wrapper">
+                            <div className="bank-count gains">
+                                <h3>Ganhos</h3>
+                                {events.length > 0 && events.map((event) => (
+                                    event.cost > 0 && (<p>{event.cost}</p>)
+                                ))}
+                            </div>
+                            <div className="bank-count loses">
+                                <h3>Perdas</h3>
+                                {events.length > 0 && events.map((event) => (
+                                    event.cost < 0 && (<p>{event.cost}</p>)
+                                ))}
+                            </div>
+                        </div>
+
                     </CardContent>
                 </Card>
 
@@ -370,7 +392,7 @@ export default function CalendarPage() {
                             </div>
 
                             <div>
-                                <Label htmlFor="eventCost">Gasto (R$)</Label>
+                                <Label htmlFor="eventCost">Despesas (R$)</Label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
                                     <Input
@@ -380,6 +402,21 @@ export default function CalendarPage() {
                                         value={eventForm.cost}
                                         onChange={(e) => setEventForm({...eventForm, cost: e.target.value})}
                                         placeholder="0,00"
+                                        className="pl-10"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="eventCost">Vezes à pagar</Label>
+                                <div className="relative">
+                                    <X className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
+                                    <Input
+                                        id="eventCost"
+                                        type="number"
+                                        step="1"
+                                        value={eventForm.times}
+                                        onChange={(e) => setEventForm({...eventForm, times: Number(e.target.value)})}
+                                        placeholder="1"
                                         className="pl-10"
                                     />
                                 </div>

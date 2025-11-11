@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({msg: "O Body é necessário"}, {status: 500})
     }
     const body = await req.json()
-    const {date, name, type, location, cost, id, user} = body
+    const {date, name, type, location, cost, id, user, times} = body
 
 
     const values = [
@@ -44,14 +44,18 @@ export async function POST(req: NextRequest) {
     try {
         await db.execute(`
             INSERT INTO events(event_id, date, name, type, user_id, place, money)
-            VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY
-            UPDATE
-                date =
-            VALUES (date), type =
-            VALUES (type), user_id =
-            VALUES (user_id), place =
-            VALUES (place), money =
-            VALUES (money);
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY
+                UPDATE date    =
+                           VALUES(date),
+                       type    =
+                           VALUES(type),
+                       user_id =
+                           VALUES(user_id),
+                       place   =
+                           VALUES(place),
+                       money   =
+                           VALUES(money);
         `, values)
         return NextResponse.json({data: values, status: 200})
     } catch (e) {
@@ -68,8 +72,8 @@ export async function DELETE(req: NextRequest) {
     try {
         await db.execute(`
             DELETE
-            FROM event
-            WHERE id = ?
+            FROM events
+            WHERE event_id = ?
         `, id)
         return NextResponse.json({ok: true}, {status: 200})
     } catch (e) {
