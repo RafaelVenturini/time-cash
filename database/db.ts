@@ -15,6 +15,12 @@ export interface Event {
     user_id: number;
     place: string;
     money: number;
+    name?: string;
+    is_recurring?: boolean;
+    recurrence_type?: string;
+    recurrence_interval?: number;
+    parent_event_id?: string;
+    recurrence_end_date?: Date;
 }
 
 export interface User {

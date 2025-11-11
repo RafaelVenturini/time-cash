@@ -3,28 +3,35 @@ import {RowDataPacket} from "mysql2";
 import db from "@/database/db"
 
 export async function GET(req: NextRequest) {
-    const searchParams = req.nextUrl.searchParams
-    console.log(searchParams)
-    const email = searchParams.get('email')
-    const password = searchParams.get('password')
+    try {
+        const searchParams = req.nextUrl.searchParams
+        const email = searchParams.get('email')
+        const password = searchParams.get('password')
 
-    if (!email || !password) {
-        return NextResponse.json({status: 500, msg: "Forneça o email e a senha."})
-    }
-
-    const [rows] = await db.execute<RowDataPacket[]>(`
-        SELECT password, user_id
-        FROM users
-        WHERE email = ?
-    `, [email])
-    if (rows && rows.length == 1) {
-        const user = rows[0]
-        if (user.password == password) {
-            console.log('Logged')
-            return NextResponse.json({status: 200, user: user.user_id})
+        if (!email || !password) {
+            return NextResponse.json({msg: "Forneça o email e a senha."}, {status: 400})
         }
-    } else {
-        return NextResponse.json({status: 500, msg: "não foi encontrado cadastro com essas credenciais."})
+
+        const [rows] = await db.execute<RowDataPacket[]>(`
+            SELECT password, user_id
+            FROM users
+            WHERE email = ?
+        `, [email])
+
+        if (!rows || rows.length === 0) {
+            return NextResponse.json({msg: "Usuário não encontrado."}, {status: 404})
+        }
+
+        const user = rows[0]
+
+        if (user.password !== password) {
+            return NextResponse.json({msg: "Senha inválida."}, {status: 401})
+        }
+
+        return NextResponse.json({user: user.user_id}, {status: 200})
+    } catch (error) {
+        console.error("Erro ao buscar usuário", error)
+        return NextResponse.json({msg: "Erro interno ao buscar usuário."}, {status: 500})
     }
 }
 
