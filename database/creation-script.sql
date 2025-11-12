@@ -16,6 +16,7 @@ CREATE TABLE events
     user_id  INT,
     place    VARCHAR(225),
     money    DECIMAL(10, 2),
+    installments INT DEFAULT NULL COMMENT 'Número de parcelas para compras',
     name     VARCHAR(225),
     is_recurring BOOLEAN DEFAULT FALSE,
     recurrence_type VARCHAR(20) DEFAULT NULL COMMENT 'monthly, weekly, yearly, daily',
