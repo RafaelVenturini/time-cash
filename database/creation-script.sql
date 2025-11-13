@@ -17,6 +17,7 @@ CREATE TABLE events
     user_id  INT,
     place    VARCHAR(225),
     money    DECIMAL(10, 2),
+    installments INT DEFAULT NULL COMMENT 'Número de parcelas para compras',
     name     VARCHAR(225),
     FOREIGN KEY (user_id) REFERENCES users (user_id)
 );

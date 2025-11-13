@@ -13,6 +13,10 @@ ADD COLUMN recurrence_end_date DATE DEFAULT NULL COMMENT 'Data final da recorrê
 ADD INDEX idx_parent_event (parent_event_id),
 ADD INDEX idx_recurring (is_recurring, recurrence_type);
 
+-- Adicionar coluna para número de parcelas em compras
+ALTER TABLE events
+ADD COLUMN installments INT DEFAULT NULL COMMENT 'Número de parcelas para compras';
+
 -- Adicionar foreign key para parent_event_id (auto-referência)
 ALTER TABLE events
 ADD CONSTRAINT fk_parent_event 

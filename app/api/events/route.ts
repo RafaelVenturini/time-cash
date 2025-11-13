@@ -56,7 +56,8 @@ export async function GET(req: NextRequest) {
         }
 
         const [data] = await db.execute(`
-            SELECT event_id, date, type, place, money, name, 
+            SELECT event_id, date, type, place, money, name,
+                   installments,
                    is_recurring, recurrence_type, recurrence_interval, 
                    parent_event_id, recurrence_end_date
             FROM events
@@ -75,12 +76,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({msg: "O Body é necessário"}, {status: 500})
     }
     const body = await req.json()
-    const {date, name, type, location, cost, id, user, times} = body
+    const {
+        date, name, type, location, cost, id, user,
+        isRecurring, recurrenceType, recurrenceInterval, recurrenceEndDate,
+        installments
+    } = body
 
     const is_recurring = isRecurring === true || isRecurring === 'true'
     const recurrence_type = recurrenceType || null
     const recurrence_interval = recurrenceInterval || 1
     const recurrence_end_date = recurrenceEndDate || null
+    const installments_count = installments || null
 
     const values = [
         id || null,
@@ -90,6 +96,7 @@ export async function POST(req: NextRequest) {
         user || null,
         location || null,
         cost || null,
+        installments_count,
         is_recurring,
         recurrence_type,
         recurrence_interval,
@@ -100,24 +107,137 @@ export async function POST(req: NextRequest) {
     try {
         // Inserir o evento original
         await db.execute(`
-            INSERT INTO events(event_id, date, name, type, user_id, place, money)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY
-                UPDATE date    =
-                           VALUES(date),
-                       type    =
-                           VALUES(type),
-                       user_id =
-                           VALUES(user_id),
-                       place   =
-                           VALUES(place),
-                       money   =
-                           VALUES(money);
+            INSERT INTO events(event_id, date, name, type, user_id, place, money,
+                              installments,
+                              is_recurring, recurrence_type, recurrence_interval,
+                              parent_event_id, recurrence_end_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY
+            UPDATE
+                date = VALUES(date),
+                type = VALUES(type),
+                user_id = VALUES(user_id),
+                place = VALUES(place),
+                money = VALUES(money),
+                installments = VALUES(installments),
+                is_recurring = VALUES(is_recurring),
+                recurrence_type = VALUES(recurrence_type),
+                recurrence_interval = VALUES(recurrence_interval),
+                recurrence_end_date = VALUES(recurrence_end_date);
         `, values)
-        return NextResponse.json({data: values, status: 200})
+
+        // Se for um evento recorrente, criar as instâncias repetidas
+        if (is_recurring && recurrence_type && date) {
+            const recurringDates = generateRecurringDates(
+                date,
+                recurrence_type,
+                recurrence_interval,
+                recurrence_end_date || undefined
+            )
+
+            // Criar eventos para cada data recorrente (pulando a primeira, que já foi criada)
+            for (let i = 1; i < recurringDates.length; i++) {
+                const recurringDate = recurringDates[i]
+                const recurringEventId = `${id}_${i}`
+
+                try {
+                    await db.execute(`
+                        INSERT INTO events(event_id, date, name, type, user_id, place, money,
+                                          installments,
+                                          is_recurring, recurrence_type, recurrence_interval,
+                                          parent_event_id, recurrence_end_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE
+                            date = VALUES(date),
+                            place = VALUES(place),
+                            money = VALUES(money),
+                            installments = VALUES(installments);
+                    `, [
+                        recurringEventId,
+                        recurringDate,
+                        name || null,
+                        type || null,
+                        user || null,
+                        location || null,
+                        cost || null,
+                        null,
+                        false, // Instâncias repetidas não são marcadas como recorrentes
+                        null,
+                        null,
+                        id, // parent_event_id aponta para o evento original
+                        null
+                    ])
+                } catch (recurringError) {
+                    console.log(`Erro ao criar evento recorrente para data ${recurringDate}:`, recurringError)
+                    // Continua criando os outros eventos mesmo se um falhar
+                }
+            }
+        }
+
+        return NextResponse.json({status: 200, data: values})
     } catch (e) {
         console.log(e)
         return NextResponse.json({msg: "Erro"}, {status: 500})
+    }
+}
+
+export async function PUT(req: NextRequest) {
+    if (req.body === null) return NextResponse.json({status: 500, msg: "O Body é necessário"})
+
+    try {
+        const body = await req.json()
+        const {
+            id,
+            date,
+            name,
+            type,
+            location,
+            cost,
+            user,
+            isRecurring,
+            recurrenceType,
+            recurrenceInterval,
+            recurrenceEndDate,
+            installments,
+        } = body
+
+        if (!id || !user) {
+            return NextResponse.json({status: 400, msg: "ID do evento e usuário são obrigatórios."})
+        }
+
+        await db.execute(`
+            UPDATE events
+            SET
+                date = ?,
+                name = ?,
+                type = ?,
+                user_id = ?,
+                place = ?,
+                money = ?,
+                installments = ?,
+                is_recurring = ?,
+                recurrence_type = ?,
+                recurrence_interval = ?,
+                recurrence_end_date = ?
+            WHERE event_id = ?
+        `, [
+            date || null,
+            name || null,
+            type || null,
+            user || null,
+            location || null,
+            cost || null,
+            installments ?? null,
+            isRecurring ? 1 : 0,
+            recurrenceType || null,
+            recurrenceInterval || 1,
+            recurrenceEndDate || null,
+            id,
+        ])
+
+        return NextResponse.json({status: 200})
+    } catch (e) {
+        console.log(e)
+        return NextResponse.json({status: 500, msg: "Erro ao atualizar evento"})
     }
 }
 

@@ -10,6 +10,7 @@ export interface Event {
     recurrenceInterval?: number
     recurrenceEndDate?: string
     parentEventId?: string
+    installments?: number | null
 }
 
 export interface DbEvent {
@@ -24,4 +25,5 @@ export interface DbEvent {
     recurrence_interval?: number
     parent_event_id?: string
     recurrence_end_date?: string
+    installments?: number | null
 }
