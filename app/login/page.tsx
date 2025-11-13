@@ -1,7 +1,6 @@
 "use client"
 
 import {useState} from "react"
-import {useRouter} from "next/navigation"
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {Input} from "@/components/ui/input"
@@ -9,11 +8,9 @@ import {Label} from "@/components/ui/label"
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {Calendar, Lock, Mail, User} from "lucide-react"
 import {useLogin} from "@/contexts/login-context"
-import {headers} from "next/headers"
 
 export default function LoginPage() {
     const {HandleChangeUser} = useLogin()
-    const router = useRouter()
     const [loginForm, setLoginForm] = useState({
         email: "",
         password: "",
@@ -33,7 +30,6 @@ export default function LoginPage() {
             .then(r => {
                 const user = r.user
                 HandleChangeUser(user)
-
             })
             .catch(e => console.log(e))
     }
@@ -52,9 +48,10 @@ export default function LoginPage() {
             .then(r => {
                 console.log("data: ", r)
                 if (r.status == 200) {
-                    HandleChangeUser(r.user)
+                    HandleChangeUser(r.user_id)
                 }
             })
+            .catch(e => console.log(e))
     }
 
     const handleResetPassword = () => {

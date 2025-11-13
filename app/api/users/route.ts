@@ -29,9 +29,9 @@ export async function GET(req: NextRequest) {
         }
 
         return NextResponse.json({user: user.user_id}, {status: 200})
-    } catch (error) {
-        console.error("Erro ao buscar usuário", error)
-        return NextResponse.json({msg: "Erro interno ao buscar usuário."}, {status: 500})
+    } catch (e) {
+        console.error("Erro ao buscar usuário", e)
+        return NextResponse.json({err: e}, {status: 500})
     }
 }
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
         const {email, password} = body
-        if (!email || !password) return NextResponse.json({msg: "email e senha sao obrigatórios"}, {status: 500})
+        if (!email || !password) return NextResponse.json({err: "email e senha sao obrigatórios"}, {status: 500})
 
         const user_id = await db.execute(`
             INSERT INTO users(email, password)
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({status: 200, user_id: user_id[0].insertId})
     } catch (e) {
         console.log("Error: ", e)
-        return NextResponse.json({status: 500, msg: "erro ao cadastrar."})
+        return NextResponse.json({err: e}, {status: 500})
     }
 }
 
@@ -69,7 +69,7 @@ export async function DELETE(req: NextRequest) {
         `, user)
     } catch (e) {
         console.log(e)
-        return NextResponse.json({status: 500, msg: "erro ao deletar."})
+        return NextResponse.json({err: e}, {status: 500})
     }
     return NextResponse.json({status: 200})
 }

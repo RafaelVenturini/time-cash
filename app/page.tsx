@@ -364,11 +364,17 @@ export default function CalendarPage() {
             installments: installmentsValue,
         }
 
-        setEvents([...events, newEvent])
-        setEventForm({name: "", type: "", location: "", cost: "", times: 1})
+        setEventForm({
+            date: "",
+            installments: "",
+            isRecurring: false,
+            recurrenceEndDate: "",
+            recurrenceInterval: "",
+            recurrenceType: "",
+            name: "", type: "", location: "", cost: ""
+        })
         setIsModalOpen(false)
         setSelectedDay(null)
-        console.log("new event: ", newEvent)
         const opt = {
             method: isEditing ? "PUT" : "POST",
             headers: {
@@ -432,7 +438,8 @@ export default function CalendarPage() {
 
         // Adicionar espaços vazios para os dias antes do primeiro dia do mês
         for (let i = 0; i < firstDayWeekday; i++) {
-            days.push(<div key={`empty-${i}`} className="min-h-24 rounded-lg border border-dashed border-border/40 bg-muted/10"></div>)
+            days.push(<div key={`empty-${i}`}
+                           className="min-h-24 rounded-lg border border-dashed border-border/40 bg-muted/10"></div>)
         }
 
         // Adicionar os dias do mês
@@ -480,7 +487,8 @@ export default function CalendarPage() {
                                 </span>
                             ))}
                             {dayEvents.length > 3 && (
-                                <span className="inline-flex items-center rounded-full bg-muted px-2 py-[2px] text-[10px] font-semibold text-muted-foreground">
+                                <span
+                                    className="inline-flex items-center rounded-full bg-muted px-2 py-[2px] text-[10px] font-semibold text-muted-foreground">
                                     +{dayEvents.length - 3}
                                 </span>
                             )}
@@ -494,312 +502,304 @@ export default function CalendarPage() {
     };
 
     return (
+        <section>
+            <div className="min-h-screen bg-background p-4 main-content-wrapper">
+                <div className="mx-auto space-y-4 main-page-wrapper">
+                    <SideNav/>
 
-        <div className="min-h-screen bg-background p-4 main-content-wrapper">
-            <div className="mx-auto space-y-4 main-page-wrapper">
-                <SideNav/>
-
-                <Card>
-                    <CardHeader className="space-y-4 pb-4">
-                        <div className="flex items-center justify-between">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={goToPreviousMonth}
-                                className="h-8 w-8 bg-transparent"
-                            >
-                                <ChevronLeft className="h-4 w-4"/>
-                            </Button>
-                            <CardTitle className="text-xl font-semibold">
-                                {MONTHS[month]} {year}
-                            </CardTitle>
-
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={goToNextMonth}
-                                className="h-8 w-8 bg-transparent"
-                            >
-                                <ChevronRight className="h-4 w-4"/>
-                            </Button>
-                        </div>
-
-                        <div className="flex justify-end">
-                            <Button onClick={handleCreateEventClick} className="gap-2">
-                                <Plus className="h-4 w-4"/>
-                                Novo Evento
-                            </Button>
-                        </div>
-                    </CardHeader>
-
-                    <CardContent>
-                        {/* Cabeçalho dos dias da semana */}
-                        <div className="mb-2 grid grid-cols-7 gap-1">
-                            {DAYS_OF_WEEK.map((day) => (
-                                <div
-                                    key={day}
-                                    className="flex h-8 items-center justify-center text-sm font-medium text-muted-foreground"
+                    <Card>
+                        <CardHeader className="space-y-4 pb-4">
+                            <div className="flex items-center justify-between">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={goToPreviousMonth}
+                                    className="h-8 w-8 bg-transparent"
                                 >
-                                    {day}
-                                </div>
-                            ))}
-                        </div>
+                                    <ChevronLeft className="h-4 w-4"/>
+                                </Button>
+                                <CardTitle className="text-xl font-semibold">
+                                    {MONTHS[month]} {year}
+                                </CardTitle>
 
-                        {/* Grade do calendário */}
-                        <div className="grid grid-cols-7 gap-1">{generateCalendarDays()}</div>
-
-                        <div className="mt-4 space-y-3 border-t border-border pt-4">
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-3 w-3 rounded bg-primary"></div>
-                                    <span>Hoje</span>
-                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={goToNextMonth}
+                                    className="h-8 w-8 bg-transparent"
+                                >
+                                    <ChevronRight className="h-4 w-4"/>
+                                </Button>
                             </div>
 
-                            {getCurrentMonthEventTypes().length > 0 && (
-                                <div>
-                                    <div className="mb-2 text-sm font-medium">Tipos de Eventos:</div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {getCurrentMonthEventTypes().map((type) => (
-                                            <div key={type} className="flex items-center gap-2 text-xs">
-                                                <div className={`h-3 w-3 rounded ${EVENT_TYPE_COLORS[type]}`}></div>
-                                                <span>{type}</span>
-                                            </div>
-                                        ))}
+                            <div className="flex justify-end">
+                                <Button onClick={handleCreateEventClick} className="gap-2">
+                                    <Plus className="h-4 w-4"/>
+                                    Novo Evento
+                                </Button>
+                            </div>
+                        </CardHeader>
+
+                        <CardContent>
+                            {/* Cabeçalho dos dias da semana */}
+                            <div className="mb-2 grid grid-cols-7 gap-1">
+                                {DAYS_OF_WEEK.map((day) => (
+                                    <div
+                                        key={day}
+                                        className="flex h-8 items-center justify-center text-sm font-medium text-muted-foreground"
+                                    >
+                                        {day}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Grade do calendário */}
+                            <div className="grid grid-cols-7 gap-1">{generateCalendarDays()}</div>
+
+                            <div className="mt-4 space-y-3 border-t border-border pt-4">
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded bg-primary"></div>
+                                        <span>Hoje</span>
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
 
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <DollarSign className="h-5 w-5"/>
-                            Resumo do Mês
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className={"bank-card"}>
-                        <div
-                            className="text-2xl font-bold text-green-600">R$ {getCurrentMonthTotal().toFixed(2)}</div>
-                        <p className="text-sm text-muted-foreground">Total restante em {MONTHS[month]}</p>
-                        <Divider/>
-                        <div className="bank-count-wrapper">
-                            <div className="bank-count gains">
-                                <h3>Ganhos</h3>
-                                {events.length > 0 && events.map((event) => (
-                                    event.cost > 0 && (<p>{event.cost}</p>)
-                                ))}
-                            </div>
-                            <div className="bank-count loses">
-                                <h3>Perdas</h3>
-                                {events.length > 0 && events.map((event) => (
-                                    event.cost < 0 && (<p>{event.cost}</p>)
-                                ))}
-                            </div>
-                        </div>
-
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
-                            R$ {getCurrentMonthTotal().toFixed(2)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">Total movimentado em {MONTHS[month]}</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
-                <DialogContent className="sm:max-w-md bg-fff">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5"/>
-                            {editingEvent ? "Editar Evento" : "Criar Evento"}{" "}
-                            {eventForm.date && `- ${new Date(eventForm.date).toLocaleDateString("pt-BR")}`}
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="eventName">Nome do Evento</Label>
-                            <Input
-                                id="eventName"
-                                value={eventForm.name}
-                                onChange={(e) => setEventForm({...eventForm, name: e.target.value})}
-                                placeholder="Digite o nome do evento"
-                            />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="eventDate">Data</Label>
-                            <Input
-                                id="eventDate"
-                                type="date"
-                                value={eventForm.date}
-                                onChange={(e) => setEventForm({...eventForm, date: e.target.value})}
-                            />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="eventType">Tipo do Evento</Label>
-                            <Select
-                                value={eventForm.type}
-                                onValueChange={(value) =>
-                                    setEventForm({
-                                        ...eventForm,
-                                        type: value,
-                                        installments: value === "Compra" ? eventForm.installments : "",
-                                    })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o tipo"/>
-                                </SelectTrigger>
-                                <SelectContent className="bg-fff">
-                                    {EVENT_TYPES.map((type) => (
-                                        <SelectItem key={type} value={type}>
-                                            {type}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <Label htmlFor="eventLocation">Local (opcional)</Label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
-                                <Input
-                                    id="eventLocation"
-                                    value={eventForm.location}
-                                    onChange={(e) => setEventForm({...eventForm, location: e.target.value})}
-                                    placeholder="Digite o local do evento"
-                                    className="pl-10"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <Label htmlFor="eventCost">Gasto (R$)</Label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
-                                <Input
-                                    id="eventCost"
-                                    type="number"
-                                    step="0.01"
-                                    value={eventForm.cost}
-                                    onChange={(e) => setEventForm({...eventForm, cost: e.target.value})}
-                                    placeholder="0,00"
-                                    className="pl-10"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between rounded-md border border-border p-3">
-                            <div>
-                                <Label htmlFor="eventRecurring" className="text-sm font-medium">
-                                    Evento recorrente
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Ative para definir uma frequência.
-                                </p>
-                            </div>
-                            <Switch
-                                id="eventRecurring"
-                                checked={eventForm.isRecurring}
-                                onCheckedChange={(checked) =>
-                                    setEventForm({
-                                        ...eventForm,
-                                        isRecurring: checked,
-                                        recurrenceType: checked ? eventForm.recurrenceType : "",
-                                        recurrenceInterval: checked ? eventForm.recurrenceInterval : "1",
-                                        recurrenceEndDate: checked ? eventForm.recurrenceEndDate : "",
-                                    })
-                                }
-                            />
-                        </div>
-
-                            <div>
-                                <Label htmlFor="eventCost">Despesas (R$)</Label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
-                        {eventForm.isRecurring && (
-                            <div className="grid gap-3 md:grid-cols-2">
-                                <div>
-                                    <Label htmlFor="recurrenceType">Frequência</Label>
-                                    <Select
-                                        value={eventForm.recurrenceType}
-                                        onValueChange={(value) => setEventForm({...eventForm, recurrenceType: value})}
-                                    >
-                                        <SelectTrigger id="recurrenceType">
-                                            <SelectValue placeholder="Selecione a frequência"/>
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-fff">
-                                            {RECURRENCE_OPTIONS.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </SelectItem>
+                                {getCurrentMonthEventTypes().length > 0 && (
+                                    <div>
+                                        <div className="mb-2 text-sm font-medium">Tipos de Eventos:</div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {getCurrentMonthEventTypes().map((type) => (
+                                                <div key={type} className="flex items-center gap-2 text-xs">
+                                                    <div className={`h-3 w-3 rounded ${EVENT_TYPE_COLORS[type]}`}></div>
+                                                    <span>{type}</span>
+                                                </div>
                                             ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                                <div className="md:col-span-2">
-                                    <Label htmlFor="recurrenceEndDate">Data final (opcional)</Label>
-                                    <Input
-                                        id="recurrenceEndDate"
-                                        type="date"
-                                        value={eventForm.recurrenceEndDate}
-                                        onChange={(e) => setEventForm({...eventForm, recurrenceEndDate: e.target.value})}
-                                    />
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <DollarSign className="h-5 w-5"/>
+                                Resumo do Mês
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className={"bank-card"}>
+                            <div className={`text-2xl font-bold 
+                            ${getCurrentMonthTotal() > 100 ? "text-green-600" : getCurrentMonthTotal() < 0 ? "text-red-600" : "text-yellow-500"} 
+                            `}>
+                                R$ {getCurrentMonthTotal().toFixed(2)}
+                            </div>
+                            <p className="text-sm text-muted-foreground">Total restante em {MONTHS[month]}</p>
+                            <Divider/>
+                            <div className="bank-count-wrapper">
+                                <div className="bank-count gains">
+                                    <h3>Ganhos</h3>
+                                    {events.length > 0 && events.map((event) => (
+                                        event.cost > 0 && (<p>{event.cost}</p>)
+                                    ))}
+                                </div>
+                                <div className="bank-count loses">
+                                    <h3>Perdas</h3>
+                                    {events.length > 0 && events.map((event) => (
+                                        event.cost < 0 && (<p>{event.cost}</p>)
+                                    ))}
                                 </div>
                             </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
+                    <DialogContent className="sm:max-w-md bg-fff">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5"/>
+                                {editingEvent ? "Editar Evento" : "Criar Evento"}{" "}
+                                {eventForm.date && `- ${new Date(eventForm.date).toLocaleDateString("pt-BR")}`}
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-4">
                             <div>
-                                <Label htmlFor="eventCost">Vezes à pagar</Label>
+                                <Label htmlFor="eventName">Nome do Evento</Label>
+                                <Input
+                                    id="eventName"
+                                    value={eventForm.name}
+                                    onChange={(e) => setEventForm({...eventForm, name: e.target.value})}
+                                    placeholder="Digite o nome do evento"
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="eventDate">Data</Label>
+                                <Input
+                                    id="eventDate"
+                                    type="date"
+                                    value={eventForm.date}
+                                    onChange={(e) => setEventForm({...eventForm, date: e.target.value})}
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="eventType">Tipo do Evento</Label>
+                                <Select
+                                    value={eventForm.type}
+                                    onValueChange={(value) =>
+                                        setEventForm({
+                                            ...eventForm,
+                                            type: value,
+                                            installments: value === "Compra" ? eventForm.installments : "",
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o tipo"/>
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-fff">
+                                        {EVENT_TYPES.map((type) => (
+                                            <SelectItem key={type} value={type}>
+                                                {type}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="eventLocation">Local (opcional)</Label>
                                 <div className="relative">
-                                    <X className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
+                                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
                                     <Input
-                                        id="eventCost"
-                                        type="number"
-                                        step="1"
-                                        value={eventForm.times}
-                                        onChange={(e) => setEventForm({...eventForm, times: Number(e.target.value)})}
-                                        placeholder="1"
+                                        id="eventLocation"
+                                        value={eventForm.location}
+                                        onChange={(e) => setEventForm({...eventForm, location: e.target.value})}
+                                        placeholder="Digite o local do evento"
                                         className="pl-10"
                                     />
                                 </div>
                             </div>
-                        )}
 
-                        {eventForm.type === "Compra" && (
                             <div>
-                                <Label htmlFor="installments">Parcelas</Label>
-                                <Input
-                                    id="installments"
-                                    type="number"
-                                    min={1}
-                                    value={eventForm.installments}
-                                    onChange={(e) => setEventForm({...eventForm, installments: e.target.value})}
-                                    placeholder="Quantidade de parcelas"
+                                <Label htmlFor="eventLocation">Despesas</Label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
+                                    <Input
+                                        id="eventLocation"
+                                        value={eventForm.cost}
+                                        type="number"
+                                        onChange={(e) => setEventForm({...eventForm, cost: e.target.value})}
+                                        placeholder="Digite a quantidade de R$"
+                                        className="pl-10"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between rounded-md border border-border p-3">
+                                <div>
+                                    <Label htmlFor="eventRecurring" className="text-sm font-medium">
+                                        Evento recorrente
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Ative para definir uma frequência.
+                                    </p>
+                                </div>
+                                <Switch
+                                    id="eventRecurring"
+                                    checked={eventForm.isRecurring}
+                                    onCheckedChange={(checked) =>
+                                        setEventForm({
+                                            ...eventForm,
+                                            isRecurring: checked,
+                                            recurrenceType: checked ? eventForm.recurrenceType : "",
+                                            recurrenceInterval: checked ? eventForm.recurrenceInterval : "1",
+                                            recurrenceEndDate: checked ? eventForm.recurrenceEndDate : "",
+                                        })
+                                    }
                                 />
                             </div>
-                        )}
 
-                        <div className="flex gap-2 pt-4">
-                            <Button variant="outline" onClick={() => handleModalChange(false)} className="flex-1">
-                                Cancelar
-                            </Button>
-                            <Button onClick={handleSaveEvent} className="flex-1" disabled={isSaveDisabled}>
-                                Salvar Evento
-                            </Button>
+                            <div>
+                                <div className="relative">
+                                    {/*<DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>*/}
+                                    {eventForm.isRecurring && (
+                                        <>
+                                            <div className="grid gap-3 md:grid-cols-2">
+                                                <div>
+                                                    <Label htmlFor="recurrenceType">Frequência</Label>
+                                                    <Select
+                                                        value={eventForm.recurrenceType}
+                                                        onValueChange={(value) => setEventForm({
+                                                            ...eventForm,
+                                                            recurrenceType: value
+                                                        })}
+                                                    >
+                                                        <SelectTrigger id="recurrenceType">
+                                                            <SelectValue placeholder="Selecione a frequência"/>
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-fff">
+                                                            {RECURRENCE_OPTIONS.map((option) => (
+                                                                <SelectItem key={option.value} value={option.value}>
+                                                                    {option.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div className="md:col-span-2">
+                                                    <Label htmlFor="recurrenceEndDate">Data final (opcional)</Label>
+                                                    <Input
+                                                        id="recurrenceEndDate"
+                                                        type="date"
+                                                        value={eventForm.recurrenceEndDate}
+                                                        onChange={(e) => setEventForm({
+                                                            ...eventForm,
+                                                            recurrenceEndDate: e.target.value
+                                                        })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {eventForm.type === "Compra" && (
+                                        <div>
+                                            <Label htmlFor="installments">Parcelas</Label>
+                                            <Input
+                                                id="installments"
+                                                type="number"
+                                                min={1}
+                                                value={eventForm.installments}
+                                                onChange={(e) => setEventForm({
+                                                    ...eventForm,
+                                                    installments: e.target.value
+                                                })}
+                                                placeholder="Quantidade de parcelas"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-2 pt-4">
+                                        <Button variant="outline" onClick={() => handleModalChange(false)}
+                                                className="flex-1">
+                                            Cancelar
+                                        </Button>
+                                        <Button onClick={handleSaveEvent} className="flex-1" disabled={isSaveDisabled}>
+                                            Salvar Evento
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </DialogContent>
                 </Dialog>
 
             </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             <Dialog open={isDayEventsModalOpen} onOpenChange={setIsDayEventsModalOpen}>
                 <DialogContent className="sm:max-w-lg bg-fff">
@@ -869,6 +869,6 @@ export default function CalendarPage() {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </section>
     )
 }

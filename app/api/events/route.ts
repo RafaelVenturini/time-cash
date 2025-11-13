@@ -56,10 +56,18 @@ export async function GET(req: NextRequest) {
         }
 
         const [data] = await db.execute(`
-            SELECT event_id, date, type, place, money, name,
+            SELECT event_id,
+                   date,
+                   type,
+                   place,
+                   money,
+                   name,
                    installments,
-                   is_recurring, recurrence_type, recurrence_interval, 
-                   parent_event_id, recurrence_end_date
+                   is_recurring,
+                   recurrence_type,
+                   recurrence_interval,
+                   parent_event_id,
+                   recurrence_end_date
             FROM events
             WHERE user_id = ?;
         `, [user_id])
@@ -108,21 +116,21 @@ export async function POST(req: NextRequest) {
         // Inserir o evento original
         await db.execute(`
             INSERT INTO events(event_id, date, name, type, user_id, place, money,
-                              installments,
-                              is_recurring, recurrence_type, recurrence_interval,
-                              parent_event_id, recurrence_end_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY
-            UPDATE
-                date = VALUES(date),
-                type = VALUES(type),
-                user_id = VALUES(user_id),
-                place = VALUES(place),
-                money = VALUES(money),
-                installments = VALUES(installments),
-                is_recurring = VALUES(is_recurring),
-                recurrence_type = VALUES(recurrence_type),
-                recurrence_interval = VALUES(recurrence_interval),
-                recurrence_end_date = VALUES(recurrence_end_date);
+                               installments,
+                               is_recurring, recurrence_type, recurrence_interval,
+                               parent_event_id, recurrence_end_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY
+                UPDATE date                = VALUES(date),
+                       type                = VALUES(type),
+                       user_id             = VALUES(user_id),
+                       place               = VALUES(place),
+                       money               = VALUES(money),
+                       installments        = VALUES(installments),
+                       is_recurring        = VALUES(is_recurring),
+                       recurrence_type     = VALUES(recurrence_type),
+                       recurrence_interval = VALUES(recurrence_interval),
+                       recurrence_end_date = VALUES(recurrence_end_date);
         `, values)
 
         // Se for um evento recorrente, criar as instâncias repetidas
@@ -142,15 +150,14 @@ export async function POST(req: NextRequest) {
                 try {
                     await db.execute(`
                         INSERT INTO events(event_id, date, name, type, user_id, place, money,
-                                          installments,
-                                          is_recurring, recurrence_type, recurrence_interval,
-                                          parent_event_id, recurrence_end_date)
+                                           installments,
+                                           is_recurring, recurrence_type, recurrence_interval,
+                                           parent_event_id, recurrence_end_date)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE
-                            date = VALUES(date),
-                            place = VALUES(place),
-                            money = VALUES(money),
-                            installments = VALUES(installments);
+                        ON DUPLICATE KEY UPDATE date         = VALUES(date),
+                                                place        = VALUES(place),
+                                                money        = VALUES(money),
+                                                installments = VALUES(installments);
                     `, [
                         recurringEventId,
                         recurringDate,
@@ -173,10 +180,10 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        return NextResponse.json({status: 200, data: values})
+        return NextResponse.json({data: values})
     } catch (e) {
         console.log(e)
-        return NextResponse.json({msg: "Erro"}, {status: 500})
+        return NextResponse.json({err: e}, {status: 500})
     }
 }
 
@@ -201,21 +208,20 @@ export async function PUT(req: NextRequest) {
         } = body
 
         if (!id || !user) {
-            return NextResponse.json({status: 400, msg: "ID do evento e usuário são obrigatórios."})
+            return NextResponse.json({msg: "ID do evento e usuário são obrigatórios."}, {status: 400})
         }
 
         await db.execute(`
             UPDATE events
-            SET
-                date = ?,
-                name = ?,
-                type = ?,
-                user_id = ?,
-                place = ?,
-                money = ?,
-                installments = ?,
-                is_recurring = ?,
-                recurrence_type = ?,
+            SET date                = ?,
+                name                = ?,
+                type                = ?,
+                user_id             = ?,
+                place               = ?,
+                money               = ?,
+                installments        = ?,
+                is_recurring        = ?,
+                recurrence_type     = ?,
                 recurrence_interval = ?,
                 recurrence_end_date = ?
             WHERE event_id = ?
@@ -237,7 +243,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({status: 200})
     } catch (e) {
         console.log(e)
-        return NextResponse.json({status: 500, msg: "Erro ao atualizar evento"})
+        return NextResponse.json({err: e}, {status: 500})
     }
 }
 
@@ -257,6 +263,6 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ok: true}, {status: 200})
     } catch (e) {
         console.log(e)
-        return NextResponse.json({msg: e}, {status: 500})
+        return NextResponse.json({err: e}, {status: 500})
     }
 }

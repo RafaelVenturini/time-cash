@@ -7,7 +7,7 @@ export function SideNav() {
         <div className="side-nav">
             {
                 btns.map(x => (
-                    <a href={x.link}>
+                    <a href={x.link} key={x.label}>
                         {x.label}
                     </a>
                 ))
