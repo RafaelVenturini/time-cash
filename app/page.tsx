@@ -2,7 +2,6 @@
 
 import {useEffect, useState} from "react"
 import {Button} from "@/components/ui/button"
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog"
 import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
@@ -11,6 +10,9 @@ import {Switch} from "@/components/ui/switch"
 import {Calendar, ChevronLeft, ChevronRight, DollarSign, MapPin, Pencil, Plus} from "lucide-react"
 import {useLogin} from "@/contexts/login-context"
 import {DbEvent, Event} from "@/utils/interface"
+import {SideNav} from "@/components/side-nav";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Divider} from "@/components/divider";
 
 const MONTHS = [
     "Janeiro",
@@ -41,6 +43,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
     Lazer: "bg-yellow-500",
     Compra: "bg-amber-500",
     Outro: "bg-gray-500",
+    Parcelamento: "bg-red-500",
+    Assinatura: "bg-red-500",
 }
 
 const RECURRENCE_OPTIONS = [
@@ -360,6 +364,11 @@ export default function CalendarPage() {
             installments: installmentsValue,
         }
 
+        setEvents([...events, newEvent])
+        setEventForm({name: "", type: "", location: "", cost: "", times: 1})
+        setIsModalOpen(false)
+        setSelectedDay(null)
+        console.log("new event: ", newEvent)
         const opt = {
             method: isEditing ? "PUT" : "POST",
             headers: {
@@ -485,8 +494,11 @@ export default function CalendarPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background p-4">
-            <div className="mx-auto max-w-5xl space-y-4">
+
+        <div className="min-h-screen bg-background p-4 main-content-wrapper">
+            <div className="mx-auto space-y-4 main-page-wrapper">
+                <SideNav/>
+
                 <Card>
                     <CardHeader className="space-y-4 pb-4">
                         <div className="flex items-center justify-between">
@@ -498,7 +510,6 @@ export default function CalendarPage() {
                             >
                                 <ChevronLeft className="h-4 w-4"/>
                             </Button>
-
                             <CardTitle className="text-xl font-semibold">
                                 {MONTHS[month]} {year}
                             </CardTitle>
@@ -569,6 +580,26 @@ export default function CalendarPage() {
                             Resumo do Mês
                         </CardTitle>
                     </CardHeader>
+                    <CardContent className={"bank-card"}>
+                        <div
+                            className="text-2xl font-bold text-green-600">R$ {getCurrentMonthTotal().toFixed(2)}</div>
+                        <p className="text-sm text-muted-foreground">Total restante em {MONTHS[month]}</p>
+                        <Divider/>
+                        <div className="bank-count-wrapper">
+                            <div className="bank-count gains">
+                                <h3>Ganhos</h3>
+                                {events.length > 0 && events.map((event) => (
+                                    event.cost > 0 && (<p>{event.cost}</p>)
+                                ))}
+                            </div>
+                            <div className="bank-count loses">
+                                <h3>Perdas</h3>
+                                {events.length > 0 && events.map((event) => (
+                                    event.cost < 0 && (<p>{event.cost}</p>)
+                                ))}
+                            </div>
+                        </div>
+
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">
                             R$ {getCurrentMonthTotal().toFixed(2)}
@@ -688,6 +719,10 @@ export default function CalendarPage() {
                             />
                         </div>
 
+                            <div>
+                                <Label htmlFor="eventCost">Despesas (R$)</Label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
                         {eventForm.isRecurring && (
                             <div className="grid gap-3 md:grid-cols-2">
                                 <div>
@@ -719,6 +754,21 @@ export default function CalendarPage() {
                                     />
                                 </div>
                             </div>
+                            <div>
+                                <Label htmlFor="eventCost">Vezes à pagar</Label>
+                                <div className="relative">
+                                    <X className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
+                                    <Input
+                                        id="eventCost"
+                                        type="number"
+                                        step="1"
+                                        value={eventForm.times}
+                                        onChange={(e) => setEventForm({...eventForm, times: Number(e.target.value)})}
+                                        placeholder="1"
+                                        className="pl-10"
+                                    />
+                                </div>
+                            </div>
                         )}
 
                         {eventForm.type === "Compra" && (
@@ -743,6 +793,10 @@ export default function CalendarPage() {
                                 Salvar Evento
                             </Button>
                         </div>
+                    </DialogContent>
+                </Dialog>
+
+            </div>
                     </div>
                 </DialogContent>
             </Dialog>

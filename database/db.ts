@@ -2,13 +2,13 @@ import db from "mysql2/promise"
 
 const connection = db.createPool({
     host: "localhost",
-    user: 'root',
+    user: 'time_cash_adm',
     password: "123456",
     port: 3306,
     database: "time_cash"
 })
 
-export interface Event{
+export interface Event {
     event_id: string;
     date: Date;
     type: string;
@@ -23,7 +23,7 @@ export interface Event{
     recurrence_end_date?: Date;
 }
 
-export interface User{
+export interface User {
     user_id: number;
     email: string;
     password: string;
