@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect, useState} from "react"
+import {useEffect, useState, useCallback} from "react"
 import {Button} from "@/components/ui/button"
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog"
 import {Input} from "@/components/ui/input"
@@ -8,6 +8,7 @@ import {Label} from "@/components/ui/label"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 import {Switch} from "@/components/ui/switch"
 import {Calendar, ChevronLeft, ChevronRight, DollarSign, MapPin, Pencil, Plus} from "lucide-react"
+import {toast} from "sonner"
 import {useLogin} from "@/contexts/login-context"
 import {DbEvent, Event} from "@/utils/interface"
 import {SideNav} from "@/components/side-nav";
@@ -40,8 +41,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
     Aniversário: "bg-pink-500",
     "Compromisso médico": "bg-red-500",
     Viagem: "bg-orange-500",
-    Lazer: "bg-yellow-500",
-    Compra: "bg-amber-500",
+    Lazer: "bg-slate-500",
+    Compra: "bg-indigo-500",
     Outro: "bg-gray-500",
     Parcelamento: "bg-red-500",
     Assinatura: "bg-red-500",
@@ -79,7 +80,9 @@ export default function CalendarPage() {
     const [eventForm, setEventForm] = useState({...INITIAL_EVENT_FORM})
     const [editingEvent, setEditingEvent] = useState<Event | null>(null)
 
-    useEffect(() => {
+    const loadEvents = useCallback(() => {
+        if (!user) return
+        
         fetch(`/api/events?user=${user}`)
             .then(r => r.json())
             .then(r => {
@@ -94,13 +97,20 @@ export default function CalendarPage() {
                             ? Number(event.installments)
                             : null
 
+                    let cost = event.money ? Number.parseFloat(event.money) : 0
+                    // Para compras, garantir que o custo seja negativo (perda)
+                    // Se o valor estiver positivo, converter para negativo
+                    if (event.type === "Compra" && cost > 0) {
+                        cost = -cost
+                    }
+
                     return {
                         id: event.event_id,
                         date: formattedDate,
                         name: event.name,
                         type: event.type,
                         location: event.place,
-                        cost: event.money ? Number.parseFloat(event.money) : 0,
+                        cost,
                         isRecurring: Boolean(event.is_recurring),
                         recurrenceType: event.recurrence_type ?? undefined,
                         recurrenceInterval: event.recurrence_interval ?? undefined,
@@ -112,7 +122,11 @@ export default function CalendarPage() {
                 setEvents(formattedEvents)
             })
             .catch(e => console.log(e))
-    }, [])
+    }, [user])
+
+    useEffect(() => {
+        loadEvents()
+    }, [loadEvents])
 
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
@@ -281,13 +295,16 @@ export default function CalendarPage() {
                 const installmentId = index === 0 ? id : `${id}-${index + 1}`
                 const installmentDate = addMonthsPreservingDay(date, index)
 
+                // Para compras, o custo deve ser negativo (perda)
+                const finalCost = type === "Compra" ? -Number(installmentCost.toFixed(2)) : Number(installmentCost.toFixed(2))
+
                 return {
                     id: installmentId,
                     date: installmentDate,
                     name: `${name} (${index + 1}/${installmentsValue})`,
                     type,
                     location,
-                    cost: Number(installmentCost.toFixed(2)),
+                    cost: finalCost,
                     isRecurring: false,
                     recurrenceType: undefined,
                     recurrenceInterval: undefined,
@@ -317,7 +334,13 @@ export default function CalendarPage() {
                     body: JSON.stringify(payload),
                 })
                     .then((response) => response.json())
-                    .then((response) => console.log(response))
+                    .then((response) => {
+                        console.log(response)
+                        // Recarregar eventos após criar todas as parcelas
+                        if (eventData.id === installmentEvents[installmentEvents.length - 1].id) {
+                            loadEvents()
+                        }
+                    })
                     .catch((error) => console.log(error))
             })
 
@@ -330,13 +353,16 @@ export default function CalendarPage() {
                 ? Math.round((totalCost / installmentsValue) * 100) / 100
                 : totalCost
 
+        // Para compras, o custo deve ser negativo (perda)
+        const finalCost = type === "Compra" ? -Number(adjustedCost.toFixed(2)) : Number(adjustedCost.toFixed(2))
+
         const updatedEvent: Event = {
             id,
             date,
             name,
             type,
             location,
-            cost: Number(adjustedCost.toFixed(2)),
+            cost: finalCost,
             isRecurring: isRecurring,
             recurrenceType: recurrenceTypeValue ? (recurrenceTypeValue as Event["recurrenceType"]) : undefined,
             recurrenceInterval: isRecurring ? recurrenceIntervalValue : undefined,
@@ -364,11 +390,6 @@ export default function CalendarPage() {
             installments: installmentsValue,
         }
 
-        setEvents([...events, newEvent])
-        setEventForm({name: "", type: "", location: "", cost: "", times: 1})
-        setIsModalOpen(false)
-        setSelectedDay(null)
-        console.log("new event: ", newEvent)
         const opt = {
             method: isEditing ? "PUT" : "POST",
             headers: {
@@ -379,8 +400,29 @@ export default function CalendarPage() {
 
         fetch("/api/events", opt)
             .then((r) => r.json())
-            .then((r) => console.log(r))
-            .catch((e) => console.log(e))
+            .then((r) => {
+                console.log(r)
+                // Recarregar eventos após salvar, especialmente importante para eventos recorrentes
+                // que geram múltiplas instâncias no backend
+                loadEvents()
+                
+                // Feedback visual para eventos recorrentes
+                if (isRecurring && !isEditing) {
+                    toast.success("Evento recorrente criado!", {
+                        description: `O evento será repetido ${recurrenceTypeValue === 'daily' ? 'diariamente' : recurrenceTypeValue === 'weekly' ? 'semanalmente' : recurrenceTypeValue === 'monthly' ? 'mensalmente' : 'anualmente'}.`,
+                    })
+                } else if (isEditing) {
+                    toast.success("Evento atualizado com sucesso!")
+                } else {
+                    toast.success("Evento criado com sucesso!")
+                }
+            })
+            .catch((e) => {
+                console.log(e)
+                toast.error("Erro ao salvar evento", {
+                    description: "Tente novamente mais tarde.",
+                })
+            })
 
         handleModalChange(false)
     }
@@ -408,6 +450,13 @@ export default function CalendarPage() {
         return [...new Set(currentMonthEvents.map((event) => event.type))]
     }
 
+    const getCurrentMonthEvents = () => {
+        return events.filter((event) => {
+            const eventDate = new Date(event.date)
+            return eventDate.getMonth() === month && eventDate.getFullYear() === year
+        })
+    }
+
     const isSaveDisabled =
         !eventForm.name ||
         !eventForm.date ||
@@ -432,7 +481,7 @@ export default function CalendarPage() {
 
         // Adicionar espaços vazios para os dias antes do primeiro dia do mês
         for (let i = 0; i < firstDayWeekday; i++) {
-            days.push(<div key={`empty-${i}`} className="min-h-24 rounded-lg border border-dashed border-border/40 bg-muted/10"></div>)
+            days.push(<div key={`empty-${i}`} className="h-[120px] w-full rounded-lg border border-dashed border-border/40 bg-muted/10"></div>)
         }
 
         // Adicionar os dias do mês
@@ -447,42 +496,43 @@ export default function CalendarPage() {
                 <div
                     key={day}
                     onClick={() => handleDayClick(day)}
-                    className={`flex h-full min-h-24 cursor-pointer flex-col rounded-lg border p-2 text-left text-xs transition-colors ${
+                    className={`flex h-[120px] w-full cursor-pointer flex-col rounded-xl border-2 px-3 py-2.5 text-left text-xs transition-all duration-300 ${
                         isSelected
-                            ? "border-primary/70 bg-primary/10"
-                            : "border-transparent bg-background hover:border-accent hover:bg-accent/40"
+                            ? "border-primary bg-gradient-to-br from-purple-100 to-blue-100 shadow-lg scale-105"
+                            : "border-transparent bg-white/60 hover:border-primary/50 hover:bg-gradient-to-br hover:from-purple-50 hover:to-blue-50 hover:shadow-md hover:scale-[1.02]"
                     } ${
-                        isToday(day) ? "ring-1 ring-primary/60" : ""
+                        isToday(day) ? "ring-2 ring-primary ring-offset-2 shadow-lg" : ""
                     }`}
                 >
-                    <div className="mb-1 flex items-center justify-between text-sm font-semibold">
-                        <span className={isSelected ? "text-primary" : "text-foreground"}>{day}</span>
+                    <div className="mb-1 flex items-center justify-between">
+                        <span className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-foreground"} transition-all duration-300`}>{day}</span>
                         {hasEvents && (
-                            <span className="text-[10px] font-medium text-muted-foreground">
-                                {dayEvents.length} evento{dayEvents.length > 1 ? "s" : ""}
+                            <span className="text-[9px] text-muted-foreground font-medium">
+                                {dayEvents.length}
                             </span>
                         )}
                     </div>
 
                     {hasEvents && (
-                        <div className="mt-1 flex flex-1 flex-wrap gap-1">
+                        <div className="mt-1.5 flex flex-1 flex-col gap-1">
                             {dayEvents.slice(0, 3).map((event) => (
-                                <span
+                                <div
                                     key={event.id}
-                                    className="inline-flex items-center gap-1 rounded-full bg-muted/80 px-2 py-[2px] text-[10px] font-medium text-muted-foreground"
+                                    className="flex items-center gap-1.5 text-[10px] text-foreground/80"
                                 >
                                     <span
-                                        className={`h-2 w-2 rounded-full ${
+                                        className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
                                             EVENT_TYPE_COLORS[event.type] || "bg-gray-400"
                                         }`}
                                     ></span>
-                                    <span className="max-w-[72px] truncate">{event.name}</span>
-                                </span>
+                                    <span className="truncate font-medium">{event.name}</span>
+                                </div>
                             ))}
                             {dayEvents.length > 3 && (
-                                <span className="inline-flex items-center rounded-full bg-muted px-2 py-[2px] text-[10px] font-semibold text-muted-foreground">
-                                    +{dayEvents.length - 3}
-                                </span>
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 flex-shrink-0"></span>
+                                    <span>+{dayEvents.length - 3} mais</span>
+                                </div>
                             )}
                         </div>
                     )}
@@ -491,26 +541,25 @@ export default function CalendarPage() {
         }
 
         return days
-    };
+    }
 
     return (
-
-        <div className="min-h-screen bg-background p-4 main-content-wrapper">
-            <div className="mx-auto space-y-4 main-page-wrapper">
+        <div className="min-h-screen bg-white p-4 main-content-wrapper">
+            <div className="mx-auto space-y-6 main-page-wrapper animate-in">
                 <SideNav/>
 
-                <Card>
-                    <CardHeader className="space-y-4 pb-4">
+                <Card className="shadow-2xl border-0 hover-lift bg-white/80 backdrop-blur-sm animate-in min-h-[680px] max-w-[1400px] w-full flex flex-col" style={{animationDelay: '0.1s'}}>
+                    <CardHeader className="space-y-4 pb-4 bg-gradient-to-r from-purple-600/10 to-blue-600/10 rounded-t-lg flex-shrink-0">
                         <div className="flex items-center justify-between">
                             <Button
                                 variant="outline"
                                 size="icon"
                                 onClick={goToPreviousMonth}
-                                className="h-8 w-8 bg-transparent"
+                                className="h-10 w-10 bg-white/80 hover:bg-primary hover:text-white transition-all duration-300 hover:scale-110 shadow-md"
                             >
-                                <ChevronLeft className="h-4 w-4"/>
+                                <ChevronLeft className="h-5 w-5"/>
                             </Button>
-                            <CardTitle className="text-xl font-semibold">
+                            <CardTitle className="text-3xl font-bold gradient-text">
                                 {MONTHS[month]} {year}
                             </CardTitle>
 
@@ -518,27 +567,30 @@ export default function CalendarPage() {
                                 variant="outline"
                                 size="icon"
                                 onClick={goToNextMonth}
-                                className="h-8 w-8 bg-transparent"
+                                className="h-10 w-10 bg-white/80 hover:bg-primary hover:text-white transition-all duration-300 hover:scale-110 shadow-md"
                             >
-                                <ChevronRight className="h-4 w-4"/>
+                                <ChevronRight className="h-5 w-5"/>
                             </Button>
                         </div>
 
                         <div className="flex justify-end">
-                            <Button onClick={handleCreateEventClick} className="gap-2">
-                                <Plus className="h-4 w-4"/>
+                            <Button 
+                                onClick={handleCreateEventClick} 
+                                className="gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            >
+                                <Plus className="h-5 w-5"/>
                                 Novo Evento
                             </Button>
                         </div>
                     </CardHeader>
 
-                    <CardContent>
+                    <CardContent className="flex-1 flex flex-col overflow-x-auto">
                         {/* Cabeçalho dos dias da semana */}
-                        <div className="mb-2 grid grid-cols-7 gap-1">
+                        <div className="mb-3 grid grid-cols-7 gap-3 min-w-[900px]">
                             {DAYS_OF_WEEK.map((day) => (
                                 <div
                                     key={day}
-                                    className="flex h-8 items-center justify-center text-sm font-medium text-muted-foreground"
+                                    className="flex h-10 w-full items-center justify-center text-sm font-bold text-muted-foreground bg-gradient-to-br from-purple-100/50 to-blue-100/50 rounded-lg"
                                 >
                                     {day}
                                 </div>
@@ -546,24 +598,24 @@ export default function CalendarPage() {
                         </div>
 
                         {/* Grade do calendário */}
-                        <div className="grid grid-cols-7 gap-1">{generateCalendarDays()}</div>
+                        <div className="grid grid-cols-7 gap-3 min-w-[900px]">{generateCalendarDays()}</div>
 
-                        <div className="mt-4 space-y-3 border-t border-border pt-4">
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-3 w-3 rounded bg-primary"></div>
-                                    <span>Hoje</span>
+                        <div className="mt-6 space-y-4 border-t-2 border-border/50 pt-6">
+                            <div className="flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-100 to-blue-100">
+                                    <div className="h-3 w-3 rounded-full bg-primary shadow-md animate-pulse"></div>
+                                    <span className="font-semibold text-foreground">Hoje</span>
                                 </div>
                             </div>
 
                             {getCurrentMonthEventTypes().length > 0 && (
-                                <div>
-                                    <div className="mb-2 text-sm font-medium">Tipos de Eventos:</div>
+                                <div className="bg-gradient-to-br from-purple-50/50 to-blue-50/50 p-4 rounded-xl">
+                                    <div className="mb-3 text-sm font-bold text-foreground">Tipos de Eventos:</div>
                                     <div className="grid grid-cols-2 gap-2">
                                         {getCurrentMonthEventTypes().map((type) => (
-                                            <div key={type} className="flex items-center gap-2 text-xs">
-                                                <div className={`h-3 w-3 rounded ${EVENT_TYPE_COLORS[type]}`}></div>
-                                                <span>{type}</span>
+                                            <div key={type} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg bg-white/60 hover:bg-white/80 transition-all">
+                                                <div className={`h-3 w-3 rounded-full shadow-sm ${EVENT_TYPE_COLORS[type]}`}></div>
+                                                <span className="font-medium">{type}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -573,75 +625,96 @@ export default function CalendarPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <DollarSign className="h-5 w-5"/>
+                <Card className="shadow-2xl border-0 hover-lift bg-white/80 backdrop-blur-sm animate-in min-h-[350px] max-w-[1400px] w-full flex flex-col" style={{animationDelay: '0.2s'}}>
+                    <CardHeader className="pb-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-lg flex-shrink-0">
+                        <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                            <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-lg">
+                                <DollarSign className="h-5 w-5 text-white"/>
+                            </div>
                             Resumo do Mês
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className={"bank-card"}>
-                        <div
-                            className="text-2xl font-bold text-green-600">R$ {getCurrentMonthTotal().toFixed(2)}</div>
-                        <p className="text-sm text-muted-foreground">Total restante em {MONTHS[month]}</p>
-                        <Divider/>
-                        <div className="bank-count-wrapper">
-                            <div className="bank-count gains">
-                                <h3>Ganhos</h3>
-                                {events.length > 0 && events.map((event) => (
-                                    event.cost > 0 && (<p>{event.cost}</p>)
-                                ))}
-                            </div>
-                            <div className="bank-count loses">
-                                <h3>Perdas</h3>
-                                {events.length > 0 && events.map((event) => (
-                                    event.cost < 0 && (<p>{event.cost}</p>)
-                                ))}
-                            </div>
-                        </div>
-
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
+                    <CardContent className="bank-card p-4 flex-1 flex flex-col">
+                        <div className="text-3xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
                             R$ {getCurrentMonthTotal().toFixed(2)}
                         </div>
-                        <p className="text-sm text-muted-foreground">Total movimentado em {MONTHS[month]}</p>
+                        <p className="text-sm text-muted-foreground mb-3">Total movimentado em {MONTHS[month]}</p>
+                        <Divider/>
+                        <div className="bank-count-wrapper gap-4 mt-3 flex-1">
+                            <div className="bank-count gains flex-1">
+                                <h3 className="text-lg font-bold mb-2">💰 Ganhos</h3>
+                                <div className="space-y-1 h-[140px] overflow-y-auto">
+                                    {(() => {
+                                        const currentMonthEvents = getCurrentMonthEvents()
+                                        const gains = currentMonthEvents.filter(e => e.cost > 0)
+                                        return gains.length > 0 ? (
+                                            gains.map((event) => (
+                                                <p key={event.id} className="text-sm font-medium">+ R$ {event.cost.toFixed(2)}</p>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm opacity-70">Nenhum ganho este mês</p>
+                                        )
+                                    })()}
+                                </div>
+                            </div>
+                            <div className="bank-count loses flex-1">
+                                <h3 className="text-lg font-bold mb-2">💸 Perdas</h3>
+                                <div className="space-y-1 h-[140px] overflow-y-auto">
+                                    {(() => {
+                                        const currentMonthEvents = getCurrentMonthEvents()
+                                        const losses = currentMonthEvents.filter(e => e.cost < 0)
+                                        return losses.length > 0 ? (
+                                            losses.map((event) => (
+                                                <p key={event.id} className="text-sm font-medium">- R$ {Math.abs(event.cost).toFixed(2)}</p>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm opacity-70">Nenhuma perda este mês</p>
+                                        )
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
-                <DialogContent className="sm:max-w-md bg-fff">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5"/>
+                <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
+                    <DialogHeader className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 p-4 rounded-t-lg -m-6 mb-4">
+                        <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+                            <div className="p-2 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg shadow-lg">
+                                <Calendar className="h-5 w-5 text-white"/>
+                            </div>
                             {editingEvent ? "Editar Evento" : "Criar Evento"}{" "}
-                            {eventForm.date && `- ${new Date(eventForm.date).toLocaleDateString("pt-BR")}`}
+                            {eventForm.date && <span className="text-lg text-muted-foreground">- {new Date(eventForm.date).toLocaleDateString("pt-BR")}</span>}
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="eventName">Nome do Evento</Label>
+                    <div className="space-y-5">
+                        <div className="space-y-2">
+                            <Label htmlFor="eventName" className="text-sm font-semibold">Nome do Evento</Label>
                             <Input
                                 id="eventName"
                                 value={eventForm.name}
                                 onChange={(e) => setEventForm({...eventForm, name: e.target.value})}
                                 placeholder="Digite o nome do evento"
+                                className="transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary hover:border-primary/50"
                             />
                         </div>
 
-                        <div>
-                            <Label htmlFor="eventDate">Data</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="eventDate" className="text-sm font-semibold">Data</Label>
                             <Input
                                 id="eventDate"
                                 type="date"
                                 value={eventForm.date}
                                 onChange={(e) => setEventForm({...eventForm, date: e.target.value})}
+                                className="transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary hover:border-primary/50"
                             />
                         </div>
 
-                        <div>
-                            <Label htmlFor="eventType">Tipo do Evento</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="eventType" className="text-sm font-semibold">Tipo do Evento</Label>
                             <Select
                                 value={eventForm.type}
                                 onValueChange={(value) =>
@@ -652,12 +725,12 @@ export default function CalendarPage() {
                                     })
                                 }
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary hover:border-primary/50">
                                     <SelectValue placeholder="Selecione o tipo"/>
                                 </SelectTrigger>
-                                <SelectContent className="bg-fff">
+                                <SelectContent className="bg-white/95 backdrop-blur-xl">
                                     {EVENT_TYPES.map((type) => (
-                                        <SelectItem key={type} value={type}>
+                                        <SelectItem key={type} value={type} className="hover:bg-primary/10 transition-colors">
                                             {type}
                                         </SelectItem>
                                     ))}
@@ -665,8 +738,8 @@ export default function CalendarPage() {
                             </Select>
                         </div>
 
-                        <div>
-                            <Label htmlFor="eventLocation">Local (opcional)</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="eventLocation" className="text-sm font-semibold">Local (opcional)</Label>
                             <div className="relative">
                                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
                                 <Input
@@ -674,13 +747,13 @@ export default function CalendarPage() {
                                     value={eventForm.location}
                                     onChange={(e) => setEventForm({...eventForm, location: e.target.value})}
                                     placeholder="Digite o local do evento"
-                                    className="pl-10"
+                                    className="pl-10 transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary hover:border-primary/50"
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <Label htmlFor="eventCost">Gasto (R$)</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="eventCost" className="text-sm font-semibold">Gasto (R$)</Label>
                             <div className="relative">
                                 <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
                                 <Input
@@ -690,17 +763,17 @@ export default function CalendarPage() {
                                     value={eventForm.cost}
                                     onChange={(e) => setEventForm({...eventForm, cost: e.target.value})}
                                     placeholder="0,00"
-                                    className="pl-10"
+                                    className="pl-10 transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary hover:border-primary/50"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between rounded-md border border-border p-3">
+                        <div className="flex items-center justify-between rounded-xl border-2 border-border/60 bg-gradient-to-br from-purple-50/50 to-blue-50/50 p-4 hover:border-primary/50 transition-all duration-300">
                             <div>
-                                <Label htmlFor="eventRecurring" className="text-sm font-medium">
-                                    Evento recorrente
+                                <Label htmlFor="eventRecurring" className="text-sm font-bold flex items-center gap-2">
+                                    🔄 Evento recorrente
                                 </Label>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Ative para definir uma frequência.
                                 </p>
                             </div>
@@ -716,27 +789,24 @@ export default function CalendarPage() {
                                         recurrenceEndDate: checked ? eventForm.recurrenceEndDate : "",
                                     })
                                 }
+                                className="data-[state=checked]:bg-primary"
                             />
                         </div>
 
-                            <div>
-                                <Label htmlFor="eventCost">Despesas (R$)</Label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
                         {eventForm.isRecurring && (
-                            <div className="grid gap-3 md:grid-cols-2">
-                                <div>
-                                    <Label htmlFor="recurrenceType">Frequência</Label>
+                            <div className="grid gap-4 md:grid-cols-2 bg-gradient-to-br from-purple-50/30 to-blue-50/30 p-4 rounded-xl border-2 border-primary/20 animate-in">
+                                <div className="space-y-2">
+                                    <Label htmlFor="recurrenceType" className="text-sm font-semibold">Frequência</Label>
                                     <Select
                                         value={eventForm.recurrenceType}
                                         onValueChange={(value) => setEventForm({...eventForm, recurrenceType: value})}
                                     >
-                                        <SelectTrigger id="recurrenceType">
+                                        <SelectTrigger id="recurrenceType" className="transition-all duration-300 focus:ring-2 focus:ring-primary hover:border-primary/50">
                                             <SelectValue placeholder="Selecione a frequência"/>
                                         </SelectTrigger>
-                                        <SelectContent className="bg-fff">
+                                        <SelectContent className="bg-white/95 backdrop-blur-xl">
                                             {RECURRENCE_OPTIONS.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
+                                                <SelectItem key={option.value} value={option.value} className="hover:bg-primary/10 transition-colors">
                                                     {option.label}
                                                 </SelectItem>
                                             ))}
@@ -744,36 +814,22 @@ export default function CalendarPage() {
                                     </Select>
                                 </div>
 
-                                <div className="md:col-span-2">
-                                    <Label htmlFor="recurrenceEndDate">Data final (opcional)</Label>
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label htmlFor="recurrenceEndDate" className="text-sm font-semibold">Data final (opcional)</Label>
                                     <Input
                                         id="recurrenceEndDate"
                                         type="date"
                                         value={eventForm.recurrenceEndDate}
                                         onChange={(e) => setEventForm({...eventForm, recurrenceEndDate: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <Label htmlFor="eventCost">Vezes à pagar</Label>
-                                <div className="relative">
-                                    <X className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/>
-                                    <Input
-                                        id="eventCost"
-                                        type="number"
-                                        step="1"
-                                        value={eventForm.times}
-                                        onChange={(e) => setEventForm({...eventForm, times: Number(e.target.value)})}
-                                        placeholder="1"
-                                        className="pl-10"
+                                        className="transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary hover:border-primary/50"
                                     />
                                 </div>
                             </div>
                         )}
 
                         {eventForm.type === "Compra" && (
-                            <div>
-                                <Label htmlFor="installments">Parcelas</Label>
+                            <div className="space-y-2 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 p-4 rounded-xl border-2 border-purple-200 animate-in">
+                                <Label htmlFor="installments" className="text-sm font-semibold">💳 Parcelas</Label>
                                 <Input
                                     id="installments"
                                     type="number"
@@ -781,31 +837,38 @@ export default function CalendarPage() {
                                     value={eventForm.installments}
                                     onChange={(e) => setEventForm({...eventForm, installments: e.target.value})}
                                     placeholder="Quantidade de parcelas"
+                                    className="transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary hover:border-primary/50"
                                 />
                             </div>
                         )}
 
-                        <div className="flex gap-2 pt-4">
-                            <Button variant="outline" onClick={() => handleModalChange(false)} className="flex-1">
+                        <div className="flex gap-3 pt-4">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => handleModalChange(false)} 
+                                className="flex-1 border-2 hover:bg-red-50 hover:border-red-300 transition-all duration-300"
+                            >
                                 Cancelar
                             </Button>
-                            <Button onClick={handleSaveEvent} className="flex-1" disabled={isSaveDisabled}>
+                            <Button 
+                                onClick={handleSaveEvent} 
+                                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100" 
+                                disabled={isSaveDisabled}
+                            >
                                 Salvar Evento
                             </Button>
                         </div>
+                    </div>
                     </DialogContent>
                 </Dialog>
 
-            </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
             <Dialog open={isDayEventsModalOpen} onOpenChange={setIsDayEventsModalOpen}>
-                <DialogContent className="sm:max-w-lg bg-fff">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5"/>
+                <DialogContent className="sm:max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
+                    <DialogHeader className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 p-4 rounded-t-lg -m-6 mb-4">
+                        <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+                            <div className="p-2 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg shadow-lg">
+                                <Calendar className="h-5 w-5 text-white"/>
+                            </div>
                             Eventos em {selectedDayLabel ?? "dia selecionado"}
                         </DialogTitle>
                     </DialogHeader>
@@ -817,52 +880,67 @@ export default function CalendarPage() {
                             </p>
                         )}
 
-                        {selectedDayEvents.map((event) => (
+                        {selectedDayEvents.map((event, idx) => (
                             <div
                                 key={event.id}
-                                className="rounded-lg border border-border/60 p-3 shadow-sm transition hover:border-primary/60"
+                                className="rounded-lg border border-border/40 p-3 transition-all duration-200 hover:border-border/60 hover:bg-muted/30"
                             >
                                 <div className="flex items-start justify-between gap-3">
-                                    <div className="space-y-1">
+                                    <div className="space-y-1.5 flex-1">
                                         <div className="flex items-center gap-2">
                                             <span
-                                                className={`inline-flex h-2.5 w-2.5 rounded-full ${
+                                                className={`h-2 w-2 rounded-full flex-shrink-0 ${
                                                     EVENT_TYPE_COLORS[event.type] || "bg-gray-400"
                                                 }`}
                                             ></span>
-                                            <span className="text-sm font-semibold">{event.name}</span>
+                                            <span className="text-sm font-semibold text-foreground">{event.name}</span>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {event.type}
-                                            {event.cost > 0 && ` • R$ ${event.cost.toFixed(2)}`}
-                                            {event.installments && event.installments > 1 && ` • ${event.installments}x`}
-                                        </p>
+                                        <div className="flex flex-wrap gap-1.5 items-center text-xs text-muted-foreground">
+                                            <span>{event.type}</span>
+                                            {event.cost !== 0 && (
+                                                <span className={event.cost > 0 ? "text-emerald-600" : "text-red-600"}>
+                                                    {event.cost > 0 ? "+" : ""}R$ {Math.abs(event.cost).toFixed(2)}
+                                                </span>
+                                            )}
+                                            {event.installments && event.installments > 1 && (
+                                                <span className="text-muted-foreground">
+                                                    • {event.installments}x
+                                                </span>
+                                            )}
+                                        </div>
                                         {event.location && (
-                                            <p className="text-xs text-muted-foreground">
-                                                Local: {event.location}
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <MapPin className="h-3 w-3"/>
+                                                {event.location}
                                             </p>
                                         )}
                                     </div>
 
                                     <Button
-                                        variant="outline"
+                                        variant="ghost"
                                         size="sm"
                                         onClick={() => handleEditEvent(event)}
-                                        className="gap-2"
+                                        className="h-8 w-8 p-0 hover:bg-muted"
                                     >
-                                        <Pencil className="h-4 w-4"/>
-                                        Editar
+                                        <Pencil className="h-3.5 w-3.5"/>
                                     </Button>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="flex justify-between gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setIsDayEventsModalOpen(false)} className="flex-1">
+                    <div className="flex justify-between gap-3 pt-2">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setIsDayEventsModalOpen(false)} 
+                            className="flex-1 border-2 hover:bg-gray-50 transition-all duration-300"
+                        >
                             Fechar
                         </Button>
-                        <Button onClick={handleCreateEventClick} className="flex-1 gap-2">
+                        <Button 
+                            onClick={handleCreateEventClick} 
+                            className="flex-1 gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
                             <Plus className="h-4 w-4"/>
                             Novo Evento
                         </Button>
