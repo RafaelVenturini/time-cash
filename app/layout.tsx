@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { LoginProvider } from "@/contexts/login-context";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -32,6 +33,7 @@ export default function RootLayout({
         <LoginProvider>
           {children}
         </LoginProvider>
+        <Toaster />
       </body>
     </html>
   );

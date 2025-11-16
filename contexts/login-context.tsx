@@ -5,7 +5,7 @@ import {createContext, ReactNode, useContext, useEffect, useState} from "react"
 type LoginContextType = {
     logout: () => void
     HandleChangeUser: (v: number) => void
-    user: () => void
+    user: number | undefined
 }
 
 const LoginContext = createContext<LoginContextType | undefined>(undefined)
@@ -18,12 +18,21 @@ export function LoginProvider({children}: { children: ReactNode }) {
 
     // Carregar estado do localStorage na montagem
     useEffect(() => {
-        const localUser = localStorage.getItem("user")
-        setUser(Number(localUser))
-        setIsLoading(false)
+        try {
+            const localUser = localStorage.getItem("user")
+            if (localUser) {
+                const parsedUser = JSON.parse(localUser)
+                setUser(Number(parsedUser))
+            }
+        } catch (e) {
+            console.error("Erro ao carregar usuário do localStorage:", e)
+            localStorage.removeItem("user")
+        } finally {
+            setIsLoading(false)
+        }
     }, [])
 
-    // Redirecionar se não estiver logado
+    // Redirecionar se não estiver logado ou se estiver logado e na página de login
     useEffect(() => {
         if (isLoading) return // Espera carregar do localStorage
 
@@ -31,13 +40,17 @@ export function LoginProvider({children}: { children: ReactNode }) {
 
         if (!user && !isLoginPage) {
             router.push("/login")
+        } else if (user && isLoginPage) {
+            // Se já estiver logado e estiver na página de login, redirecionar para a página principal
+            router.push("/")
         }
     }, [user, pathname, router, isLoading])
 
     function HandleChangeUser(v: number) {
         setUser(v)
         localStorage.setItem("user", JSON.stringify(v))
-        window.location.href = "/"
+        // Redirecionar para a página principal após login
+        router.push("/")
     }
 
     const logout = () => {
@@ -49,7 +62,6 @@ export function LoginProvider({children}: { children: ReactNode }) {
     const value: LoginContextType = {
         logout,
         HandleChangeUser,
-        //@ts-expect-error user exists?
         user
     }
 
